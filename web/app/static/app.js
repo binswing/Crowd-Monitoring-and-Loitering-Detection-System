@@ -59,6 +59,11 @@ const UI = {
     btnToggleVisual: $('btn-toggle-visual'),
 };
 
+// Add-camera form refs (webcam selection)
+const newCamType = $('new-cam-type');
+const newCamDeviceSelect = $('new-cam-device-select');
+const newCamUrl = $('new-cam-url');
+
 // ---- Clock ----
 function updateClock() {
     const now = new Date();
@@ -538,9 +543,86 @@ UI.btnClearZone.addEventListener('click', () => clearZone());
 UI.btnSaveZone.addEventListener('click', () => saveZone());
 
 // Camera management
+async function populateWebcamDevices() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(t => t.stop());
+    } catch (e) {
+        console.warn('getUserMedia failed or denied:', e);
+    }
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter(d => d.kind === 'videoinput');
+        const sel = $('new-cam-device-select');
+        if (!sel) return;
+        sel.innerHTML = '';
+        // Use numeric index as option value so backend OpenCV can open the correct device index.
+        videoInputs.forEach((d, i) => {
+            const opt = document.createElement('option');
+            opt.value = String(i); // numeric index (0,1,2...)
+            const label = d.label || `Camera ${i + 1}`;
+            opt.textContent = label;
+            opt.dataset.label = label;
+            sel.appendChild(opt);
+        });
+        if (videoInputs.length === 0) sel.innerHTML = '<option value="">Không tìm thấy camera</option>';
+        const grp = document.getElementById('new-cam-webcam-group');
+        if (grp) grp.style.display = '';
+
+        const nameInput = $('new-cam-name');
+        sel.addEventListener('change', () => {
+            const label = sel.selectedOptions[0]?.dataset?.label || sel.selectedOptions[0]?.textContent;
+            if (label && nameInput) {
+                // Automatically set the name to the selected device label so it always matches selection
+                nameInput.value = label;
+                nameInput.placeholder = label;
+            }
+        });
+
+        const firstLabel = sel.selectedOptions[0]?.dataset?.label || sel.selectedOptions[0]?.textContent;
+        if (firstLabel && nameInput) {
+            nameInput.value = firstLabel;
+            nameInput.placeholder = firstLabel;
+        }
+    } catch (e) {
+        console.warn('enumerateDevices failed:', e);
+    }
+}
+
+// Toggle webcam device select when user chooses source type
+if (newCamType) {
+    newCamType.addEventListener('change', async (ev) => {
+        const val = ev.target.value;
+        const grp = document.getElementById('new-cam-webcam-group');
+        if (val === 'webcam') {
+            if (grp) grp.style.display = '';
+            await populateWebcamDevices();
+            // update placeholder and (if empty/default) value with first device label
+            const sel = $('new-cam-device-select');
+            const nameInput = $('new-cam-name');
+            const firstLabel = sel?.selectedOptions[0]?.dataset?.label;
+            if (sel && nameInput && firstLabel) {
+                if (!nameInput.value || nameInput.value === 'Camera mới') {
+                    nameInput.value = firstLabel;
+                }
+                nameInput.placeholder = firstLabel;
+            }
+        } else {
+            if (grp) grp.style.display = 'none';
+        }
+    });
+}
+
 $('btn-add-camera').addEventListener('click', () => {
     const form = $('add-camera-form');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    const isHidden = form.style.display === 'none' || !form.style.display;
+    form.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        if ($('new-cam-type')?.value === 'webcam') {
+            populateWebcamDevices().catch(() => {});
+        }
+    }
 });
 
 $('btn-cancel-camera').addEventListener('click', () => {
@@ -548,10 +630,25 @@ $('btn-cancel-camera').addEventListener('click', () => {
 });
 
 $('btn-create-camera').addEventListener('click', async () => {
+    const name = $('new-cam-name').value || 'Camera mới';
+    const source_type = $('new-cam-type').value;
+    let source_url = $('new-cam-url').value;
+    if (source_type === 'webcam') {
+        const sel = $('new-cam-device-select');
+        if (sel && sel.value) source_url = sel.value;
+        // fallback to existing input or '0' if empty
+        source_url = source_url || '0';
+    }
+    let finalName = name;
+    if ((!finalName || finalName === 'Camera mới' || finalName.trim() === '') && source_type === 'webcam') {
+        const sel = $('new-cam-device-select');
+        const label = sel?.selectedOptions[0]?.dataset?.label;
+        if (label) finalName = label;
+    }
     const payload = {
-        name: $('new-cam-name').value || 'Camera mới',
-        source_type: $('new-cam-type').value,
-        source_url: $('new-cam-url').value,
+        name: finalName,
+        source_type,
+        source_url,
         mode: $('new-cam-mode').value,
     };
     try {
