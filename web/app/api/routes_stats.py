@@ -15,6 +15,7 @@ def people_density(camera_id: str = None):
     stats = query.order_by(CountStat.timestamp.desc()).limit(100).all()
     db.close()
     return {"camera_id": camera_id, "series": [
-        {"time": str(s.timestamp), "count": s.people_count, "enter": s.enter_count, "exit": s.exit_count}
+        {"time": str(s.timestamp), "count": s.people_count, "enter": s.enter_count, "exit": s.exit_count,
+         "camera_id": s.camera_id, "zone_id": s.zone_id}
         for s in stats
     ]}

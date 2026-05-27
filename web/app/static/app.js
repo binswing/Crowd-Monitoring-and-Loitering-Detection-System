@@ -46,6 +46,7 @@ const UI = {
     alertsContainer: $('alerts-container'),
     alertBadge:      $('alert-badge'),
     navAlertCount:   $('nav-alert-count'),
+        logList:         $('log-list'),
     currentTime:     $('current-time'),
     pageTitle:       $('page-title'),
     liveFeed:        $('live-feed'),
@@ -457,6 +458,52 @@ async function loadAlertHistory() {
     }
 }
 
+// ---- Count Stats (Log History) ----
+async function loadCountStats() {
+    const list = UI.logList || $('log-list');
+    try {
+        const camId = UI.cameraInput.value || null;
+        let path = `/api/stats/people-density${camId ? '?camera_id=' + camId : ''}`;
+        let data = await api('GET', path);
+        let stats = data?.series || [];
+        // Fallback: if filtered by camera returned no records, try fetching all cameras
+        if (camId && (!stats || stats.length === 0)) {
+            data = await api('GET', `/api/stats/people-density`);
+            stats = data?.series || [];
+        }
+        if (!stats.length) {
+            list.innerHTML = '<div class="empty-state"><p>Không có bản ghi.</p></div>';
+            return;
+        }
+        list.innerHTML = '';
+        stats.forEach(s => {
+            const timeStr = s.time ? new Date(s.time).toLocaleString('vi-VN') : '-';
+            const div = document.createElement('div');
+            div.className = 'log-item';
+            const camLabel = s.camera_id || data.camera_id || UI.cameraInput.value || '–';
+            const zoneLabel = s.zone_id || s.zone || '–';
+            // Support different key names that may come from various producers
+            const people = s.count ?? s.people_count ?? 0;
+            const enter = s.enter ?? s.enter_count ?? 0;
+            const exitc = s.exit ?? s.exit_count ?? 0;
+            const tracks = s.total_tracks ?? s.tracks ?? 0;
+
+            div.innerHTML = `
+                <div class="alert-header">
+                    <span class="alert-type">${camLabel}</span>
+                    <span class="alert-time">${timeStr}</span>
+                </div>
+                <div class="log-meta">
+                    <div class="log-values">People: ${people} • Enter: ${enter} • Exit: ${exitc} • Tracks: ${tracks} • Zone: ${zoneLabel}</div>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    } catch (e) {
+        list.innerHTML = '<div class="empty-state"><p>Lỗi khi tải lịch sử đếm.</p></div>';
+    }
+}
+
 // ---- Camera actions ----
 async function selectAndStartCamera(camId) {
     UI.cameraInput.value = camId;
@@ -505,18 +552,20 @@ function switchView(name) {
     if (viewEl) viewEl.classList.add('active');
     if (navEl) navEl.classList.add('active');
 
-    const titles = { dashboard: 'Dashboard', cameras: 'Cameras', alerts: 'Cảnh báo' };
+    const titles = { dashboard: 'Dashboard', cameras: 'Cameras', alerts: 'Cảnh báo', log: 'Log History' };
     UI.pageTitle.textContent = titles[name] || name;
     currentView = name;
 
     if (name === 'cameras') loadCameras();
     if (name === 'alerts') loadAlertHistory();
+    if (name === 'log') loadCountStats();
 }
 
 // ---- Event Listeners ----
 $('nav-dashboard').addEventListener('click', e => { e.preventDefault(); switchView('dashboard'); });
 $('nav-cameras').addEventListener('click',   e => { e.preventDefault(); switchView('cameras'); });
 $('nav-alerts').addEventListener('click',    e => { e.preventDefault(); switchView('alerts'); });
+$('nav-log').addEventListener('click',       e => { e.preventDefault(); switchView('log'); });
 
 UI.btnStart.addEventListener('click', async () => {
     const camId = UI.cameraInput.value.trim();
