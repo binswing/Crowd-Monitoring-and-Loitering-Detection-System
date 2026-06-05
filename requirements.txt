@@ -1,0 +1,31 @@
+--index-url https://download.pytorch.org/whl/cu121
+--extra-index-url https://pypi.org/simple
+
+torch
+torchvision
+scipy
+wandb
+matplotlib
+opencv-python
+huggingface_hub
+
+fastapi
+uvicorn[standard]
+websockets
+redis[asyncio]
+celery
+sqlalchemy
+pydantic
+pydantic-settings
+opencv-python
+numpy
+requests
+httpx
+python-multipart
+aiofiles
+python-dotenv
+ultralytics
+supervision
+shapely
+
+# yolox
