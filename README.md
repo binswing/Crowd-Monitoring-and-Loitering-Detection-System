@@ -84,10 +84,5 @@ crowd-tracking/
 - **Cấu trúc `.gitignore`:** Đã chuẩn hóa việc ẩn đi các Virtual Environments (`venv/`, `crowd_env/`), thư mục `__pycache__`, các tập tin video đầu ra lớn (`*.mp4`, `*.avi`) và mô hình tracking dung lượng cao (`*.pt`) để dọn dẹp repo.
 - **Tuỳ chỉnh Vùng Giám Sát:** Bạn có thể tự do tinh chỉnh toạ độ đa giác, ngưỡng vận tốc lảng vảng, và thời gian cảnh báo trực tiếp trong `BytetrackCountingLoitering/config.py`.
 
-## Kế Hoạch Phát Triển (To-do)
-- Gắn thêm API trả kết quả luồng stream về Frontend / Mobile App.
-- Phát triển thêm các phân đoạn logic tính toán cảnh báo hành vi phức tạp hơn (VD: chạy tán loạn, ngã).
-- Đóng gói mã nguồn thành môi trường Docker.
-
 ## Giấy Phép
 Dự án sử dụng đa phần là các thư viện mã nguồn mở phân phối miễn phí theo quy định của YOLOv8 và chuẩn thư viện Python mở khác. Vui lòng tuân thủ bản quyền của thư viện bên thứ ba đang được áp dụng.
